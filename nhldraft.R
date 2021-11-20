@@ -7,11 +7,11 @@ library(tidyverse)
 
 list2 <- list()
 
+#Getting relevant information from the draft API for the drafts 2000-2015
+#Get Draft Year, Teamname,PlayerName, Round,OV, prospectID
 for (x in 2000:2015) {
   draftlink <- nhlapi:::nhl_url_drafts(x)
-  
   drafts <- nhlapi:::nhl_from_json(draftlink)
-  #print(drafts)
   
   list1 <- list()
   
@@ -34,18 +34,14 @@ for (x in 2000:2015) {
 
 AllNHLDrafts <- do.call(rbind, list2)
 
-
-
+#get playerID and Position from the prospectID
 AllNHLDrafts$PlayerID <- ""
-allCount <- as.integer(count(AllNHLDrafts[1]))
-
-
 AllNHLDrafts$Posistion <- ""
 for (y in 1: length(AllNHLDrafts$Draftyear)) {
   #print(y)
   player <- AllNHLDrafts[y,6]
   
-  #some fixes because NHLAPI is dumb
+  #some fixes because NHLAPI is dumb and doesn't have prospectID for some players
   #And I am dumb for fixing them like this
   if (AllNHLDrafts[y,3] == "Brian Lee") {
     test <- 8471683
@@ -99,13 +95,12 @@ for (y in 1: length(AllNHLDrafts$Draftyear)) {
     test <- 8462245
     AllNHLDrafts$PlayerID[y] <- test
   } else {
-    #print(is.na(player))
+    #see if prospectID is blank, if so then get the playerID and position from their name.
     if (is.na(player) == TRUE) {
-      
+      #try catch, if the player name is not found, then assume they never played in the NHL, so they don't matter
       catch1 <- tryCatch(
         {
           playerName <- AllNHLDrafts[y,3]
-          #print(playerName)
           playerID_No_ProspectID <- nhl_players(playerName) %>%
             select(id)
           position_No_ProspectID <- nhl_players(playerName) %>%
@@ -119,6 +114,7 @@ for (y in 1: length(AllNHLDrafts$Draftyear)) {
           position <- "NA"
         },
         finally={
+          #Change LW, RW, and Center to just Forward and then log them in
           if (position_No_ProspectID == "L" || position_No_ProspectID == "R" || position_No_ProspectID == "C"){
             position_No_ProspectID <- "F"
           }
@@ -127,27 +123,22 @@ for (y in 1: length(AllNHLDrafts$Draftyear)) {
         }
         
       )
+      #Else: we have their prospectID, so we can get the position and ID from their page
     }else {
       player <- paste("https://statsapi.web.nhl.com/api/v1/draft/prospects/",player, sep = "")
       player <- nhlapi:::nhl_from_json(player)
       position <- player[["prospects"]][["primaryPosition.code"]]
       id <- player[["prospects"]][["nhlPlayerId"]]
       
+      #Change LW, RW, and Center to just Forward and then log them in
       if (position == "R" || position == "L" || position == "C"){
         position <- "F"
       }
       
       AllNHLDrafts$PlayerID[y] <- id
       AllNHLDrafts$Posistion[y] <- position
-      #print(player)
-      
     }
-    
   }
-  
-  
-  
-  
 }
 
 
@@ -157,29 +148,30 @@ for (y in 1: length(AllNHLDrafts$Draftyear)) {
 AllNHLDrafts$GP <- ""
 AllNHLDrafts$Goals <- ""
 AllNHLDrafts$Assists <- ""
-
 AllNHLDrafts$Wins <- ""
 for (z in 1:length(AllNHLDrafts$Draftyear)) {
-  print(z)
   getGames <- tryCatch(
     {
-      getGP <- nhlapi:::nhl_players_allseasons( playerIds = AllNHLDrafts[z,7]) %>%
+      #get their stats from the nhlAPI
+      getPlayerStats <- nhlapi:::nhl_players_allseasons( playerIds = AllNHLDrafts[z,7]) %>%
         filter(league.name == "National Hockey League")
-      games <- sum(getGP$stat.games)
+      games <- sum(getPlayerStats$stat.games)
       
+      #if the position is Forward or Defense, pull the data away
       if(AllNHLDrafts$Posistion[z] == "F" || AllNHLDrafts$Posistion[z] == "D" ) {
-        print(sum( getGP$stat.goals ))
-        goals <- sum( getGP$stat.goals )
-        assists <- sum(getGP$stat.assists)
+        print(sum( getPlayerStats$stat.goals ))
+        goals <- sum( getPlayerStats$stat.goals )
+        assists <- sum(getPlayerStats$stat.assists)
         wins <- 0
       
-        
+        #else they are goalies
       } else {
-        wins <- sum(getGP$stat.wins)
+        wins <- sum(getPlayerStats$stat.wins)
         goals <- 0
         assists <- 0
       }
     },
+    #or there was an error, so record no stats(meaning they never played in the NHL)
     error=function(cond) {
       games <- 0
       goals <- 0
@@ -187,6 +179,7 @@ for (z in 1:length(AllNHLDrafts$Draftyear)) {
       wins <- 0
     },
     finally={
+      
       AllNHLDrafts$GP[z] <- games
       AllNHLDrafts$Goals[z] <- goals
       AllNHLDrafts$Assists[z] <- assists
@@ -195,26 +188,24 @@ for (z in 1:length(AllNHLDrafts$Draftyear)) {
   )
 }
 
-##
+#############
 #Change Pheonix to Arizona, and Atlanta Thrashers to Winnipeg Jets
-##
-
-
 AllNHLDraftsFinal$TeamName[AllNHLDraftsFinal$TeamName == "Atlanta Thrashers"] <- "Winnipeg Jets"
-AllNHLDraftsFinal$TeamName[AllNHLDraftsFinal$TeamName == "Pheonix Coyotes"] <- "Arizona Coyotes"
-  
+AllNHLDraftsFinal$TeamName[AllNHLDraftsFinal$TeamName == "Phoenix Coyotes"] <- "Arizona Coyotes"
+ 
 
 
 
 
-dfwrite <- apply(AllNHLDrafts,2, as.character)
+dfwrite <- apply(AllNHLDraftsFinal,2, as.character)
 write.csv(dfwrite,"C:\\Users\\Luke\\Desktop\\NHLDraft.csv", row.names = FALSE)
 
 
 
 ############################################################################
-#Using the data collected
-############################################################################
+#Using the data collected to modify the data to see who "made the SHL"
+#made is b=y using https://dobberprospects.com/2020/05/16/nhl-draft-pick-probabilities/amp/
+#which puts people who made it to a regular NHL players is someone who played over 100 GP
 
 
 AllNHLDraftsFinal$GP <- as.numeric(AllNHLDraftsFinal$GP)
@@ -264,3 +255,4 @@ test <- AllNHLDraftsFinal %>%
 IndTeams <- AllNHLDraftsFinal %>%
   count(AllNHLDraftsFinal$TeamName,AllNHLDraftsFinal$Round)
 
+#Can be done easier in a mysql query than in R
