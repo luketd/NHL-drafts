@@ -7,7 +7,7 @@ Visualization of the data collected
 https://public.tableau.com/app/profile/luke.td/viz/NHLDrafts/Dashboard1?publish=yes
 https://public.tableau.com/app/profile/luke.td/viz/NHLDrafts/Dashboard2?publish=yes
 
-![Alt text](https://i.imgur.com/eQVAWUf.png "Example")
+![Alt text](https://cdn.discordapp.com/attachments/711007308846596100/912836886647689216/Dashboard_1.png "Example")
 
 ![Alt text](https://i.imgur.com/MAndRmq.png "Example")
 
