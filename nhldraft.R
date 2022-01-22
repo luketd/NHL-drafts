@@ -94,7 +94,14 @@ for (y in 1: length(AllNHLDrafts$Draftyear)) {
   } else if (AllNHLDrafts[y,3] == "David Macdonald"){
     test <- 8462245
     AllNHLDrafts$PlayerID[y] <- test
-  } else {
+  } else if (AllNHLDrafts[y,3] == "Matt Martin") {
+    test <- 8474709
+    AllNHLDrafts$PlayerID[y] <- test
+  } else if (AllNHLDrafts[y,3] == "Cory Stillman") {
+    test <- 8469550
+    AllNHLDrafts$PlayerID[y] <- test
+  }
+  else {
     #see if prospectID is blank, if so then get the playerID and position from their name.
     if (is.na(player) == TRUE) {
       #try catch, if the player name is not found, then assume they never played in the NHL, so they don't matter
@@ -130,6 +137,17 @@ for (y in 1: length(AllNHLDrafts$Draftyear)) {
       position <- player[["prospects"]][["primaryPosition.code"]]
       id <- player[["prospects"]][["nhlPlayerId"]]
       
+
+      if (is.null(id) == TRUE)
+      {
+        playerName <- AllNHLDrafts[y,3]
+        id <- nhl_players(playerName) %>%
+          select(id)
+        position <- nhl_players(playerName) %>%
+          select(primaryPosition.code)
+      }
+      ########Sometimes ProspectID doesnt return player ID because ?????
+      
       #Change LW, RW, and Center to just Forward and then log them in
       if (position == "R" || position == "L" || position == "C"){
         position <- "F"
@@ -140,6 +158,7 @@ for (y in 1: length(AllNHLDrafts$Draftyear)) {
     }
   }
 }
+
 
 
 #######################################################
@@ -159,11 +178,11 @@ for (z in 1:length(AllNHLDrafts$Draftyear)) {
       
       #if the position is Forward or Defense, pull the data away
       if(AllNHLDrafts$Posistion[z] == "F" || AllNHLDrafts$Posistion[z] == "D" ) {
-        print(sum( getPlayerStats$stat.goals ))
+        #print(sum( getPlayerStats$stat.goals ))
         goals <- sum( getPlayerStats$stat.goals )
         assists <- sum(getPlayerStats$stat.assists)
         wins <- 0
-      
+        
         #else they are goalies
       } else {
         wins <- sum(getPlayerStats$stat.wins)
@@ -190,14 +209,14 @@ for (z in 1:length(AllNHLDrafts$Draftyear)) {
 
 #############
 #Change Pheonix to Arizona, and Atlanta Thrashers to Winnipeg Jets
-AllNHLDraftsFinal$TeamName[AllNHLDraftsFinal$TeamName == "Atlanta Thrashers"] <- "Winnipeg Jets"
-AllNHLDraftsFinal$TeamName[AllNHLDraftsFinal$TeamName == "Phoenix Coyotes"] <- "Arizona Coyotes"
- 
+AllNHLDrafts$TeamName[AllNHLDrafts$TeamName == "Atlanta Thrashers"] <- "Winnipeg Jets"
+AllNHLDrafts$TeamName[AllNHLDrafts$TeamName == "Phoenix Coyotes"] <- "Arizona Coyotes"
 
 
 
 
-dfwrite <- apply(AllNHLDraftsFinal,2, as.character)
+
+dfwrite <- apply(AllNHLDrafts,2, as.character)
 write.csv(dfwrite,"C:\\Users\\Luke\\Desktop\\NHLDraft.csv", row.names = FALSE)
 
 
@@ -216,26 +235,26 @@ AllNHLDraftsFinal$Wins <- as.numeric(AllNHLDraftsFinal$Wins)
 GPThreshold <- 100
 
 Round1 <- sum(AllNHLDraftsFinal$GP >= GPThreshold & AllNHLDraftsFinal$Round == 1 )/
-sum(AllNHLDraftsFinal$Round == 1)
+  sum(AllNHLDraftsFinal$Round == 1)
 
 Round2 <- sum(AllNHLDraftsFinal$GP >= GPThreshold & AllNHLDraftsFinal$Round == 2 )/
-sum(AllNHLDraftsFinal$Round == 2)
+  sum(AllNHLDraftsFinal$Round == 2)
 
 Round3 <- sum(AllNHLDraftsFinal$GP >= GPThreshold & AllNHLDraftsFinal$Round == 3 )/
-sum(AllNHLDraftsFinal$Round == 3)
+  sum(AllNHLDraftsFinal$Round == 3)
 
 Round4 <- sum(AllNHLDraftsFinal$GP >= GPThreshold & AllNHLDraftsFinal$Round == 4 )/
-sum(AllNHLDraftsFinal$Round == 4)
+  sum(AllNHLDraftsFinal$Round == 4)
 
 Round5 <- sum(AllNHLDraftsFinal$GP >= GPThreshold & AllNHLDraftsFinal$Round == 5 )/
-sum(AllNHLDraftsFinal$Round == 5)
+  sum(AllNHLDraftsFinal$Round == 5)
 
 
 Round6 <- sum(AllNHLDraftsFinal$GP >= GPThreshold & AllNHLDraftsFinal$Round == 6 )/
-sum(AllNHLDraftsFinal$Round == 6)
+  sum(AllNHLDraftsFinal$Round == 6)
 
 Round7 <- sum(AllNHLDraftsFinal$GP >= GPThreshold & AllNHLDraftsFinal$Round == 7 )/
-sum(AllNHLDraftsFinal$Round == 7)
+  sum(AllNHLDraftsFinal$Round == 7)
 
 
 
@@ -256,3 +275,4 @@ IndTeams <- AllNHLDraftsFinal %>%
   count(AllNHLDraftsFinal$TeamName,AllNHLDraftsFinal$Round)
 
 #Can be done easier in a mysql query than in R
+
